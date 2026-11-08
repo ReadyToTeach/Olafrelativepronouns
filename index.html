@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Olaf's Adventure</title>
+
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;font-family:"Trebuchet MS",Arial,sans-serif}
+body{background:#050509}
+
+#game{
+position:relative;
+width:100vw;
+height:100vh;
+overflow:hidden;
+background:
+linear-gradient(rgba(10,5,20,.2),rgba(10,5,20,.35)),
+url("https://i.postimg.cc/85tTq7qK/Fon.png");
+background-size:cover;
+background-position:center
+}
+
+#world{
+position:absolute;
+width:3600px;
+height:100%;
+left:0;
+top:0;
+transition:transform 1s ease
+}
+
+#hud{
+position:absolute;
+z-index:100;
+top:20px;
+left:20px;
+color:white;
+padding:15px 25px;
+background:rgba(15,10,30,.7);
+border-radius:20px;
+border:1px solid rgba(255,255,255,.3)
+}
+
+#title{
+font-size:22px;
+color:#ffd75e;
+font-weight:bold
+}
+
+#explanation{
+display:none;
+margin-top:20px;
+padding:15px;
+border-radius:15px;
+background:rgba(255,80,100,.2);
+border:1px solid rgba(255,255,255,.3);
+color:#ffd75e;
+font-size:17px;
+line-height:1.4
+}
+
+
+#continueButton{
+display:none;
+margin:20px auto 0;
+padding:10px 25px;
+border:0;
+border-radius:15px;
+background:#ffd75e;
+color:#221133;
+font-weight:bold;
+cursor:pointer;
+}
+#player{
+position:absolute;
+width:185px;
+height:215px;
+z-index:20;
+background:url("https://i.postimg.cc/XJVVHfDC/Olaf.png") center/contain no-repeat;
+transition:left .8s ease,bottom .8s ease
+}
+
+.jump{animation:jump .9s}
+
+@keyframes jump{
+40%{transform:translateY(-130px) scale(1.05)}
+70%{transform:translateY(-80px)}
+}
+
+.platform{
+position:absolute;
+width:360px;
+height:205px;
+z-index:10;
+background:url("https://i.postimg.cc/63YBD8Dd/Platform.png") center/contain no-repeat
+}
+
+.fall{animation:fall 1s forwards}
+
+@keyframes fall{
+to{transform:translateY(500px) rotate(15deg);opacity:0}
+}
+
+.snowflake{
+position:absolute;
+width:65px;
+height:65px;
+left:50%;
+top:-105px;
+transform:translateX(-50%);
+background:url("https://i.postimg.cc/76mqp5p1/Snowflake.png") center/contain no-repeat;
+cursor:pointer;
+animation:float 1.2s infinite;
+filter:drop-shadow(0 0 10px gold)
+}
+
+@keyframes float{
+50%{margin-top:-10px}
+}
+
+.snowflake-fall{
+animation:waffleFall 1s forwards
+}
+
+@keyframes waffleFall{
+to{transform:translateY(500px) rotate(360deg);opacity:0}
+}
+
+#taskOverlay{
+display:none;
+position:absolute;
+z-index:200;
+inset:0;
+background:rgba(0,0,0,.5)
+}
+
+#taskBox{
+position:absolute;
+width:min(550px,90vw);
+left:50%;
+top:50%;
+transform:translate(-50%,-50%);
+padding:35px;
+border-radius:25px;
+background:rgba(20,15,45,.95);
+color:white;
+text-align:center
+}
+
+#taskTitle{
+color:#ffd75e;
+font-size:30px
+}
+
+#question{
+font-size:22px;
+margin:20px
+}
+
+.answerButton{
+display:block;
+width:90%;
+margin:12px auto;
+padding:15px;
+border:0;
+border-radius:15px;
+cursor:pointer;
+font-size:18px;
+font-weight:bold;
+color:white;
+background:linear-gradient(135deg,#ff416c,#7138e8)
+}
+
+#startScreen,#endScreen{
+position:absolute;
+z-index:300;
+inset:0;
+display:flex;
+align-items:center;
+justify-content:center;
+background:rgba(5,0,15,.8)
+}
+
+#endScreen{
+display:none;
+z-index:400
+}
+
+.startCard,.endCard{
+width:min(600px,90vw);
+padding:40px;
+border-radius:30px;
+background:rgba(20,15,40,.95);
+color:white;
+text-align:center
+}
+
+.startCard h1{
+font-size:40px;
+color:#ffd75e
+}
+
+#startButton,#restartButton{
+padding:15px 35px;
+border:0;
+border-radius:18px;
+font-size:20px;
+font-weight:bold;
+cursor:pointer;
+color:white;
+background:linear-gradient(135deg,#ff416c,#7138e8)
+}
+</style>
+</head>
+
+<body>
+
+<div id="game">
+<audio id="correctSound" src="https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3" preload="auto"></audio>
+<audio id="wrongSound" preload="auto">
+<source src="https://assets.mixkit.co/active_storage/sfx/1113/1113-preview.mp3" type="audio/mpeg">
+</audio>
+<div id="hud">
+<div id="title">❄️ Olaf's Result</div>
+<div>Snowflakes: <span id="score">0</span>/15</div>
+<div>Progress: <span id="progress">0</span>/15</div>
+</div>
+
+<div id="world">
+<div id="player"></div>
+</div>
+
+<div id="taskOverlay">
+<div id="taskBox">
+<h2 id="taskTitle">❄️ Snowflake Challenge</h2>
+<div id="taskNumber"></div>
+<div id="question"></div>
+<div id="answers"></div>
+<div id="result"></div>
+<div id="explanation"></div>
+<button id="continueButton">CONTINUE</button>
+</div>
+</div>
+
+<div id="startScreen">
+<div class="startCard">
+<h1>Olaf's<br>Adventure</h1>
+<p>
+Jump from platform to platform.<br>
+Answer grammar questions.<br>
+Collect snowflakes and help Olaf!
+</p>
+<button id="startButton">START ADVENTURE 🚀</button>
+</div>
+</div>
+
+<div id="endScreen">
+<div class="endCard">
+<h2 id="endTitle">🎉 Olaf's Adventure Complete!</h2>
+<p id="endText">You collected:<br>
+<b><span id="finalScore">0</span>/15</b></p>
+<button id="restartButton">TRY AGAIN?</button>
+</div>
+</div>
+
+</div>
+<script>
+
+const tasks=[
+{
+q:"The girl _____ lives next door is very friendly.",
+a:["which","who","where"],
+c:1,
+e:"Use WHO for people."
+},
+{
+q:"This is the book _____ I bought yesterday.",
+a:["which","whose","when"],
+c:0,
+e:"Use WHICH for things and animals."
+},
+{
+q:"The boy _____ father is a doctor is my classmate.",
+a:["who","where","whose"],
+c:2,
+e:"Use WHOSE to show possession."
+},
+{
+q:"This is the house _____ I grew up.",
+a:["when","where","which"],
+c:1,
+e:"Use WHERE for places."
+},
+{
+q:"I remember the day _____ we first met.",
+a:["whose","who","when"],
+c:2,
+e:"Use WHEN for time."
+},
+{
+q:"The woman _____ works in this shop is very kind.",
+a:["who","which","where"],
+c:0,
+e:"Use WHO for people."
+},
+{
+q:"The phone _____ I bought is very expensive.",
+a:["when","which","whose"],
+c:1,
+e:"Use WHICH for things and animals."
+},
+{
+q:"That's the boy _____ dog won the competition.",
+a:["where","whose","which"],
+c:1,
+e:"Use WHOSE to show possession."
+},
+{
+q:"The restaurant _____ we had dinner was beautiful.",
+a:["where","who","when"],
+c:0,
+e:"Use WHERE for places."
+},
+{
+q:"Summer is the season _____ many people go on holiday.",
+a:["which","whose","when"],
+c:2,
+e:"Use WHEN for time."
+},
+{
+q:"The cat _____ is sleeping on the sofa is mine.",
+a:["who","which","where"],
+c:1,
+e:"Use WHICH for animals and things."
+},
+{
+q:"The teacher _____ teaches us English is from London.",
+a:["who","when","whose"],
+c:0,
+e:"Use WHO for people."
+},
+{
+q:"This is the park _____ we usually play football.",
+a:["whose","where","who"],
+c:1,
+e:"Use WHERE for places."
+},
+{
+q:"The girl _____ mother is a famous singer is my friend.",
+a:["which","whose","when"],
+c:1,
+e:"Use WHOSE to show possession."
+},
+{
+q:"Monday is the day _____ I have my English lesson.",
+a:["where","who","when"],
+c:2,
+e:"Use WHEN for days and other time expressions."
+}
+];
+
+
+const world=document.getElementById("world"),
+player=document.getElementById("player"),
+score=document.getElementById("score"),
+progress=document.getElementById("progress"),
+overlay=document.getElementById("taskOverlay"),
+question=document.getElementById("question"),
+answers=document.getElementById("answers"),
+result=document.getElementById("result"),
+explanation=document.getElementById("explanation"),
+continueButton=document.getElementById("continueButton"),
+number=document.getElementById("taskNumber"),
+start=document.getElementById("startScreen"),
+end=document.getElementById("endScreen"),
+final=document.getElementById("finalScore");
+endTitle=document.getElementById("endTitle"),
+endText=document.getElementById("endText");
+
+
+let current=0;
+let collected=0;
+let platformNow=0;
+let zone=0;
+let platforms=[];
+let busy=false;
+let mistakes=[];
+let reviewMode=false;
+let reviewIndex=0;
+
+
+const zoneWidth=1200;
+
+
+const layout=[
+{x:100,y:110},
+{x:370,y:180},
+{x:650,y:130},
+{x:930,y:240}
+];
+
+
+
+function createZone(){
+
+platforms.forEach(p=>p.remove());
+platforms=[];
+
+
+layout.forEach((d,i)=>{
+
+let p=document.createElement("div");
+p.className="platform";
+p.style.left=d.x+zone*zoneWidth+"px";
+p.style.bottom=d.y+"px";
+
+
+let w=document.createElement("div");
+w.className="snowflake";
+
+w.onclick=()=>openTask(i);
+
+
+p.appendChild(w);
+world.appendChild(p);
+platforms.push(p);
+
+});
+
+
+platformNow=0;
+movePlayer();
+
+}
+
+
+
+function movePlayer(){
+
+let p=platforms[platformNow];
+
+player.style.left=parseInt(p.style.left)+90+"px";
+
+let platformHeight=parseInt(p.style.bottom);
+
+player.style.bottom=platformHeight+35+"px";
+
+}
+
+
+function openTask(i){
+
+if(busy||i!==platformNow)return;
+
+busy=true;
+
+let t=tasks[current];
+
+number.innerText="Challenge "+(current+1)+" / 15";
+question.innerText=t.q;
+
+answers.innerHTML="";
+result.innerText="";
+explanation.style.display="none";
+continueButton.style.display="none";
+
+t.a.forEach((a,n)=>{
+
+let b=document.createElement("button");
+
+b.className="answerButton";
+b.innerText=a;
+
+b.onclick=()=>checkAnswer(n,i);
+
+answers.appendChild(b);
+
+});
+
+
+overlay.style.display="block";
+
+}
+
+
+
+function checkAnswer(n,i){
+
+if(n===tasks[current].c){
+correct(i);
+}else{
+wrong(i);
+}
+
+}
+
+
+
+function correct(i){
+
+let waffle=platforms[i].querySelector(".snowflake");
+
+if(waffle){
+
+let fly=waffle.cloneNode(true);
+let pos=waffle.getBoundingClientRect();
+
+fly.style.position="fixed";
+fly.style.left=pos.left+"px";
+fly.style.top=pos.top+"px";
+fly.style.zIndex="500";
+document.body.appendChild(fly);
+
+setTimeout(()=>{
+fly.style.transition="all .7s ease";
+fly.style.left="70px";
+fly.style.top="30px";
+fly.style.transform="scale(.2)";
+fly.style.opacity="0";
+},50);
+
+setTimeout(()=>fly.remove(),800);
+
+}
+
+let sound=document.getElementById("correctSound");
+
+if(sound){
+sound.volume=.2;
+sound.currentTime=0;
+sound.play().catch(()=>{});
+}
+
+collected++;
+current++;
+
+score.innerText=collected;
+progress.innerText=current;
+
+result.innerText="⭐ Correct!";
+
+platforms[i].classList.add("fall");
+
+setTimeout(nextPlatform,1000);
+
+}
+
+
+function wrong(i){
+
+result.innerText="❌ Wrong!";
+
+let sound=document.getElementById("wrongSound");
+
+if(sound){
+sound.volume=.15;
+sound.currentTime=0;
+sound.play().catch(()=>{});
+}
+
+if(!mistakes.includes(current)){
+mistakes.push(current);
+}
+
+let w=platforms[i].querySelector(".snowflake");
+
+if(w){
+w.classList.add("snowflake-fall");
+w.onclick=null;
+}
+
+platforms[i].classList.add("fall");
+
+current++;
+
+progress.innerText=current;
+
+setTimeout(nextPlatform,1000);
+
+}
+
+
+function nextPlatform(){
+
+overlay.style.display="none";
+
+if(current>=tasks.length){
+
+finish();
+
+return;
+
+}
+
+platformNow++;
+
+if(platformNow>=platforms.length){
+
+nextZone();
+
+return;
+
+}
+
+jump();
+
+}
+
+
+function jump(){
+
+let p=platforms[platformNow];
+
+player.classList.remove("jump");
+void player.offsetWidth;
+player.classList.add("jump");
+
+
+setTimeout(()=>{
+
+player.style.left=parseInt(p.style.left)+90+"px";
+player.style.bottom=parseInt(p.style.bottom)+35+"px";
+
+},150);
+
+
+setTimeout(()=>busy=false,1000);
+
+}
+
+
+
+function nextZone(){
+
+zone++;
+
+world.style.transform=
+"translateX(-"+zone*zoneWidth+"px)";
+
+
+setTimeout(()=>{
+
+createZone();
+busy=false;
+
+},1000);
+
+}
+
+
+
+function startGame(){
+
+start.style.display="none";
+end.style.display="none";
+
+current=0;
+collected=0;
+zone=0;
+mistakes=[];
+reviewMode=false;
+reviewIndex=0;
+
+score.innerText=0;
+progress.innerText=0;
+
+world.style.transform="translateX(0)";
+
+createZone();
+
+}
+
+
+function finish(){
+
+overlay.style.display="none";
+
+if(mistakes.length===0){
+
+endTitle.innerText="🎉 Olaf's Adventure Complete!";
+endText.innerHTML=
+"You collected all the snowflakes!<br><b>15/15</b>";
+
+restartButton.innerText="TRY AGAIN?";
+
+}else{
+
+endTitle.innerText="📚 Almost there!";
+endText.innerHTML=
+"You got <b>"+collected+"/15</b> correct.<br>"+
+"You have "+mistakes.length+" mistake"+
+(mistakes.length===1?"":"s")+" to correct.";
+
+restartButton.innerText="CORRECT YOUR MISTAKES";
+
+}
+
+final.innerText=collected;
+
+end.style.display="flex";
+
+}
+
+function startReview(){
+
+end.style.display="none";
+
+reviewMode=true;
+reviewIndex=0;
+
+showReviewQuestion();
+
+}
+function showReviewQuestion(){
+
+if(reviewIndex>=mistakes.length){
+
+finishReview();
+
+return;
+
+}
+
+let taskIndex=mistakes[reviewIndex];
+let t=tasks[taskIndex];
+
+number.innerText=
+"Correct your mistakes: "+
+(reviewIndex+1)+" / "+mistakes.length;
+
+question.innerText=t.q;
+
+answers.innerHTML="";
+result.innerText="";
+
+explanation.style.display="none";
+continueButton.style.display="none";
+
+t.a.forEach((a,n)=>{
+
+let b=document.createElement("button");
+
+b.className="answerButton";
+b.innerText=a;
+
+b.onclick=()=>checkReviewAnswer(n);
+
+answers.appendChild(b);
+
+});
+
+overlay.style.display="block";
+
+}
+function checkReviewAnswer(n){
+
+let taskIndex=mistakes[reviewIndex];
+let t=tasks[taskIndex];
+
+if(n===t.c){
+
+let sound=document.getElementById("correctSound");
+
+if(sound){
+sound.volume=.2;
+sound.currentTime=0;
+sound.play().catch(()=>{});
+}
+
+result.innerText="⭐ Correct!";
+
+collected++;
+
+score.innerText=collected;
+
+explanation.innerText="✅ "+t.e;
+explanation.style.display="block";
+
+setTimeout(()=>{
+
+reviewIndex++;
+showReviewQuestion();
+
+},1200);
+
+}else{
+
+let sound=document.getElementById("wrongSound");
+
+if(sound){
+sound.volume=.15;
+sound.currentTime=0;
+sound.play().catch(()=>{});
+}
+
+result.innerText="❌ Try again!";
+
+explanation.innerText="💡 Rule: "+t.e;
+explanation.style.display="block";
+
+}
+
+}
+function finishReview(){
+
+overlay.style.display="none";
+
+reviewMode=false;
+
+endTitle.innerText="🎉 Olaf's Adventure Complete!";
+
+endText.innerHTML=
+"You corrected all your mistakes!<br><b>"+
+collected+"/15</b>";
+
+final.innerText=collected;
+
+restartButton.innerText="TRY AGAIN?";
+
+end.style.display="flex";
+
+}
+document.getElementById("startButton").onclick=startGame;
+
+document.getElementById("restartButton").onclick=()=>{
+
+if(mistakes.length===0){
+
+startGame();
+
+}else{
+
+startReview();
+
+}
+
+};
+
+
+</script>
+
+</body>
+</html>
